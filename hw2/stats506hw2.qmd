@@ -1,0 +1,269 @@
+---
+title: "stats506hw2"
+author: "Qichang Wan"
+format:
+  html:
+    code-fold: true
+    code-summary: "Show the code"
+    embed-resources: true
+editor: visual
+---
+
+Link to GitHub: https://github.com/Tealeaf2001/stats-506-hw2.git
+
+## Problem 1
+### a(1)
+```{r}
+#' Function to implement this game using a loop
+#'
+#' @param n a positive integer,the number of dice to roll
+#' @return Total winnings
+
+play_dice1 <- function(n){
+  w <- 0
+  s <- sample(1:6,n,replace = TRUE)
+  for (i in c(1:n)) {
+    #set.seed(i)
+    x <- s[i]
+    if(x==3|x==5){
+      w <- w+2*x-2
+    }else{
+      w <- w-2
+    }
+    
+  }
+  return(w)
+}
+
+play_dice1(10)
+```
+
+### a(2)
+```{r}
+#' Function to implement this game using built-in R vectorized functions.
+#'
+#' @param n a positive integer,the number of dice to roll
+#' @return Total winnings
+
+play_dice2 <- function(n){
+  
+  x <- sample(1:6,n,replace = TRUE)
+  w <- ifelse(x %in% c(3,5), 2*x-2,-2)
+
+  return(sum(w))
+}
+
+play_dice2(10)
+```
+### a(3)
+```{r}
+#' Function to implement this by rolling all the dice into one and collapsing the die rolls into a single table()
+#'
+#' @param n a positive integer,the number of dice to roll
+#' @return Total winnings
+
+play_dice3 <- function(n){
+  
+  x <- sample(1:6,n,replace = TRUE)
+  w <- table(factor(x,levels = 1:6))
+
+  return((w[3]*3*2+w[5]*5*2-n*2)[[1]])
+}
+
+play_dice3(10)
+```
+### a(4)
+```{r}
+#' Function to implement this game by using one of the “apply” functions
+#'
+#' @param n a positive integer,the number of dice to roll
+#' @return Total winnings
+
+play_dice4 <- function(n){
+  
+  x <- sample(1:6,n,replace = TRUE)
+  w <- sapply(x, function(roll){
+    if(roll==3|roll==5){
+      return(roll*2-2)
+    }
+    else{
+      return(-2)
+    }
+  })
+  
+  return(sum(w))
+}
+
+play_dice4(10)
+```
+### b
+```{r}
+play_dice1(3)
+play_dice1(3000)
+play_dice2(3)
+play_dice2(3000)
+play_dice3(3)
+play_dice3(3000)
+play_dice4(3)
+play_dice4(3000)
+```
+### c
+```{r}
+set.seed(0)
+play_dice1(3)
+play_dice1(3000)
+set.seed(0)
+play_dice2(3)
+play_dice2(3000)
+set.seed(0)
+play_dice3(3)
+play_dice3(3000)
+set.seed(0)
+play_dice4(3)
+play_dice4(3000)
+```
+### d
+```{r}
+library(microbenchmark)
+set.seed(123)  
+
+
+benchmark_1000 <- microbenchmark(
+  model1 = play_dice1(1000),
+  model2 = play_dice2(1000),
+  model3 = play_dice3(1000),
+  model4 = play_dice4(1000),
+  times = 100
+)
+
+
+benchmark_100000 <- microbenchmark(
+  model1 = play_dice1(100000),
+  model2 = play_dice2(100000),
+  model3 = play_dice3(100000),
+  model4 = play_dice4(100000),
+  times = 10
+)
+
+print("Benchmark for 1,000 rolls:")
+print(benchmark_1000)
+
+print("\nBenchmark for 100,000 rolls:")
+print(benchmark_100000)
+```
+### e
+The game is not fair for the host as the player tends to win more than they lose over time.
+```{r}
+#' Function to get the result of several times try
+#'
+#' @param ntimes a positive integer,total number of games played
+#' @param n a positive integer,the number of dice to roll
+#' @return mean winnings
+
+set.seed(1)  
+
+mc <- function(ntimes, n) {
+  results <- replicate(ntimes, play_dice2(n))
+  mean_winnings <- mean(results)
+  return(mean_winnings)
+}
+
+# Run the simulation with 100,000 games, each game rolling 10 dice
+average_winnings <- mc(100000, 10)
+average_winnings
+
+```
+
+
+
+## Problem2
+### a
+```{r}
+data <- read.csv('cars.csv')
+name <- colnames(data)
+colnames(data) <- c('height','length','width','driveline','enginetype','hybrid','forwardgears','transmission','city','fueltype','highway','classification','ID','make','model','year','horsepower','torque')
+```
+
+### b
+```{r}
+data1 <- data[data$fueltype=='Gasoline',]
+head(data1)
+#data2 <- subset(data,fueltype=='Gasoline')
+```
+
+### c
+```{r}
+hist(data1$highway , 
+     main = "Distribution of Highway Gas Mileage (Gasoline Cars)", 
+     xlab = "Highway MPG", 
+     ylab = "Frequency", 
+     col = "lightblue", 
+     border = "black")
+
+```
+
+```{r}
+# Apply a Log Transformation 
+data1$loghighway <- log(data1$highway + 1)
+
+# Plot the transformed distribution
+hist(data1$loghighway, 
+     main = "Log Transformed Highway Gas Mileage (Gasoline Cars)", 
+     xlab = "Log(Highway MPG)", 
+     ylab = "Frequency", 
+     col = "lightgreen", 
+     border = "black")
+
+```
+
+### d
+```{r}
+# Fit the linear regression model
+model <- lm(loghighway ~ torque + horsepower + width + height + length + factor(year), data = data1)
+
+
+summary(model)
+
+```
+From the result, when other variables are controled, if torque increase 1,then log(MPG on highway +1) will decrease -2.193e-03
+
+### e
+```{r}
+library(interactions)
+model_interaction <- lm(loghighway ~ torque * horsepower + width + height + length + factor(year), data = data1)
+
+summary(model_interaction)
+
+```
+```{r}
+# Generate interaction plot
+interact_plot(model_interaction, pred = torque, modx = horsepower, 
+              modx.values = c(100, 250, 400),  
+              plot.points = TRUE, 
+              at = list(year = 2011),  
+              x.label = "torque", 
+              y.label = "Highway MPG", 
+              main.title = "Interaction between torque and horsepower on Highway MPG",data = data1)
+
+```
+### f
+```{r}
+Y <- data1$highway
+
+X <- model.matrix(~ torque + horsepower + width + height + length + factor(year), data = data1)
+
+#head(X)
+
+beta_hat <- solve(t(X) %*% X) %*% t(X) %*% Y
+
+beta_hat
+
+cat('coefficients by lm()',coef(model))
+
+all.equal(as.vector(beta_hat), coef(model))
+
+```
+
+
+
+
